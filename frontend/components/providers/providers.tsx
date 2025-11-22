@@ -4,7 +4,7 @@ import { wagmiAdapter, projectId } from '@/lib/wagmi.config'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createAppKit } from '@reown/appkit/react'
 import { sepolia } from '@reown/appkit/networks'
-import React, { type ReactNode } from 'react'
+import { type ReactNode } from 'react'
 import { cookieToInitialState, WagmiProvider, type Config } from 'wagmi'
 import { Toaster } from '@/components/ui/sonner'
 
@@ -23,8 +23,9 @@ const metadata = {
   icons: ['https://avatars.githubusercontent.com/u/179229932'],
 }
 
-// Create the modal
-const modal = createAppKit({
+// Create and initialize AppKit modal
+// The modal is automatically available via web components (<appkit-button />) and hooks
+createAppKit({
   adapters: [wagmiAdapter],
   projectId,
   networks: [sepolia],
