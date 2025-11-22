@@ -1,22 +1,56 @@
 'use client'
 
-import { WagmiProvider } from 'wagmi'
+import { wagmiAdapter, projectId } from '@/lib/wagmi.config'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { config, queryClientConfig } from '@/lib/wagmi.config'
+import { createAppKit } from '@reown/appkit/react'
+import { sepolia } from '@reown/appkit/networks'
+import React, { type ReactNode } from 'react'
+import { cookieToInitialState, WagmiProvider, type Config } from 'wagmi'
 import { Toaster } from '@/components/ui/sonner'
-import { useState } from 'react'
+
+// Set up queryClient
+const queryClient = new QueryClient()
+
+if (!projectId) {
+  console.warn('Project ID is not defined. WalletConnect features may not work properly.')
+}
+
+// Set up metadata
+const metadata = {
+  name: 'Voting DApp',
+  description: 'Decentralized Voting Platform',
+  url: typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000',
+  icons: ['https://avatars.githubusercontent.com/u/179229932'],
+}
+
+// Create the modal
+const modal = createAppKit({
+  adapters: [wagmiAdapter],
+  projectId,
+  networks: [sepolia],
+  defaultNetwork: sepolia,
+  metadata: metadata,
+  features: {
+    analytics: true, // Optional - defaults to your Cloud configuration
+  },
+})
 
 /**
- * Providers Component
+ * Context Provider Component
  * Wraps the app with wagmi and React Query providers
- * Must be a client component since wagmi requires client-side execution
+ * Includes Reown AppKit modal for wallet connections
  */
-export function Providers({ children }: { children: React.ReactNode }) {
-  // Create QueryClient instance (must be created inside component to avoid SSR issues)
-  const [queryClient] = useState(() => new QueryClient(queryClientConfig))
+export function Providers({ 
+  children, 
+  cookies 
+}: { 
+  children: ReactNode
+  cookies: string | null 
+}) {
+  const initialState = cookieToInitialState(wagmiAdapter.wagmiConfig as Config, cookies)
 
   return (
-    <WagmiProvider config={config}>
+    <WagmiProvider config={wagmiAdapter.wagmiConfig as Config} initialState={initialState}>
       <QueryClientProvider client={queryClient}>
         {children}
         <Toaster />
@@ -24,4 +58,3 @@ export function Providers({ children }: { children: React.ReactNode }) {
     </WagmiProvider>
   )
 }
-

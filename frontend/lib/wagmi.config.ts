@@ -1,59 +1,30 @@
-'use client'
-
-import { createConfig, http } from 'wagmi'
-import { sepolia } from 'wagmi/chains'
-import { injected, metaMask, walletConnect } from 'wagmi/connectors'
+import { cookieStorage, createStorage } from '@wagmi/core'
+import { WagmiAdapter } from '@reown/appkit-adapter-wagmi'
+import { sepolia } from '@reown/appkit/networks'
 
 /**
- * Wagmi Configuration
- * Sets up wallet connectors and network configuration
+ * Wagmi Configuration using Reown AppKit
+ * Sets up WagmiAdapter with Sepolia network
  */
 
-// Get project ID from environment variable (for WalletConnect)
-// If not set, WalletConnect will still work but with limited features
-const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || ''
+// Get projectId from environment variable
+// Should be set in .env.local as NEXT_PUBLIC_PROJECT_ID
+export const projectId = process.env.NEXT_PUBLIC_PROJECT_ID || process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || ''
 
-export const config = createConfig({
-  chains: [sepolia],
-  connectors: [
-    // MetaMask connector (most common)
-    injected({
-      target: 'metaMask',
-    }),
-    // MetaMask as explicit connector
-    metaMask({
-      dappMetadata: {
-        name: 'Voting DApp',
-        url: typeof window !== 'undefined' ? window.location.origin : '',
-      },
-    }),
-    // WalletConnect connector (for mobile wallets)
-    ...(projectId
-      ? [
-          walletConnect({
-            projectId,
-            showQrModal: true,
-          }),
-        ]
-      : []),
-  ],
-  transports: {
-    [sepolia.id]: http('https://rpc.sepolia.org'),
-  },
-  ssr: true, // Enable SSR support for Next.js
-})
-
-/**
- * Query Client Configuration
- * Used by React Query for caching and data fetching
- */
-export const queryClientConfig = {
-  defaultOptions: {
-    queries: {
-      refetchOnWindowFocus: false,
-      retry: 1,
-      staleTime: 1000 * 60 * 5, // 5 minutes
-    },
-  },
+if (!projectId) {
+  console.warn('Project ID is not defined. WalletConnect features may not work properly.')
 }
 
+export const networks = [sepolia]
+
+// Set up the Wagmi Adapter (Config)
+export const wagmiAdapter = new WagmiAdapter({
+  storage: createStorage({
+    storage: cookieStorage,
+  }),
+  ssr: true,
+  projectId,
+  networks,
+})
+
+export const config = wagmiAdapter.wagmiConfig
