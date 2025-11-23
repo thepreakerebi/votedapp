@@ -19,7 +19,7 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { toast } from 'sonner'
-import { useState, startTransition } from 'react'
+import { useState, useEffect, useRef, useCallback, startTransition } from 'react'
 
 const proposalSchema = z.object({
   title: z
@@ -41,6 +41,7 @@ type ProposalFormValues = z.infer<typeof proposalSchema>
 export function ProposalForm() {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const hasNavigated = useRef(false)
 
   const form = useForm<ProposalFormValues>({
     resolver: zodResolver(proposalSchema),
@@ -56,8 +57,9 @@ export function ProposalForm() {
     hash,
   })
 
-  const onSubmit = (values: ProposalFormValues) => {
+  const onSubmit = useCallback((values: ProposalFormValues) => {
     setIsSubmitting(true)
+    hasNavigated.current = false
     writeContract(
       {
         address: contractConfig.address,
@@ -72,22 +74,31 @@ export function ProposalForm() {
         },
       }
     )
-  }
+  }, [writeContract])
 
   // Handle successful transaction
-  if (isSuccess && isSubmitting) {
-    toast.success('Proposal created successfully!')
-    startTransition(() => {
-      setIsSubmitting(false)
-      router.push('/')
-    })
-  }
+  useEffect(() => {
+    if (isSuccess && isSubmitting && !hasNavigated.current) {
+      hasNavigated.current = true
+      toast.success('Proposal created successfully!')
+      startTransition(() => {
+        setIsSubmitting(false)
+        router.push('/')
+      })
+    }
+  }, [isSuccess, isSubmitting, router])
 
   const isLoading = isPending || isConfirming || isSubmitting
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault()
+          form.handleSubmit(onSubmit)(e)
+        }}
+        className="space-y-6"
+      >
         <FormField
           control={form.control}
           name="title"
