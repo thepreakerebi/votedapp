@@ -42,6 +42,9 @@ const nextConfig: NextConfig = {
     "tap",
     "why-is-node-running",
   ],
+  // Add empty turbopack config to silence the error when Turbopack is used
+  // The serverExternalPackages above will handle the module resolution issues
+  turbopack: {},
 };
 
 export default nextConfig;
