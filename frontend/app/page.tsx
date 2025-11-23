@@ -9,7 +9,7 @@ export default function Home() {
   return (
     <>
       <Navbar />
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-4 py-8 pt-20">
         <section className="max-w-4xl mx-auto">
           <header className="mb-8">
             <h1 className="text-3xl font-bold mb-2">Voting Proposals</h1>

@@ -21,7 +21,7 @@ export default async function ProposalPage({ params }: ProposalPageProps) {
   return (
     <>
       <Navbar showBackButton={true} />
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-4 py-8 pt-20">
         <section className="max-w-4xl mx-auto">
           <ProposalDetails proposalId={proposalId} />
         </section>
