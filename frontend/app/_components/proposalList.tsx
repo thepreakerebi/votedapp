@@ -58,28 +58,39 @@ export function ProposalList() {
     )
   }
 
+  // Reverse array to show newest proposals first
+  const reversedProposals = [...proposals].reverse()
+
   return (
     <section className="space-y-4">
-      {proposals.map((proposal: {
+      {reversedProposals.map((proposal: {
         id?: bigint
         title?: string
         description?: string
         creator?: `0x${string}`
         createdAt?: bigint
         voteCount?: bigint
-      }, index: number) => (
-        <ProposalCard
-          key={proposal.id?.toString() || `proposal-${index}`}
-          proposal={{
-            id: proposal.id || BigInt(0),
-            title: proposal.title || 'Untitled Proposal',
-            description: proposal.description || '',
-            creator: proposal.creator || ('0x0000000000000000000000000000000000000000' as `0x${string}`),
-            createdAt: proposal.createdAt || BigInt(0),
-            voteCount: proposal.voteCount || BigInt(0),
-          }}
-        />
-      ))}
+      }, index: number) => {
+        // Capitalize title
+        const capitalizeTitle = (title: string) => {
+          if (!title) return 'Untitled Proposal'
+          return title.charAt(0).toUpperCase() + title.slice(1)
+        }
+
+        return (
+          <ProposalCard
+            key={proposal.id?.toString() || `proposal-${index}`}
+            proposal={{
+              id: proposal.id || BigInt(0),
+              title: capitalizeTitle(proposal.title || 'Untitled Proposal'),
+              description: proposal.description || '',
+              creator: proposal.creator || ('0x0000000000000000000000000000000000000000' as `0x${string}`),
+              createdAt: proposal.createdAt || BigInt(0),
+              voteCount: proposal.voteCount || BigInt(0),
+            }}
+          />
+        )
+      })}
     </section>
   )
 }
