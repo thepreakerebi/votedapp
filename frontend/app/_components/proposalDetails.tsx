@@ -89,26 +89,34 @@ export function ProposalDetails({ proposalId }: ProposalDetailsProps) {
     },
   })
 
-  // Ensure votes are properly formatted
+  // Ensure votes are properly formatted and sorted (newest first)
   const votes: Vote[] | undefined = votesData && Array.isArray(votesData)
-    ? votesData.map((vote: VoteData) => {
-        if (!vote) return null
-        // Handle object format { voter, timestamp }
-        if (typeof vote === 'object' && !Array.isArray(vote) && 'voter' in vote) {
-          return {
-            voter: vote.voter,
-            timestamp: vote.timestamp,
+    ? votesData
+        .map((vote: VoteData) => {
+          if (!vote) return null
+          // Handle object format { voter, timestamp }
+          if (typeof vote === 'object' && !Array.isArray(vote) && 'voter' in vote) {
+            return {
+              voter: vote.voter,
+              timestamp: vote.timestamp,
+            }
           }
-        }
-        // Handle array format [voter, timestamp]
-        if (Array.isArray(vote) && vote.length === 2) {
-          return {
-            voter: vote[0] as `0x${string}`,
-            timestamp: vote[1] as bigint,
+          // Handle array format [voter, timestamp]
+          if (Array.isArray(vote) && vote.length === 2) {
+            return {
+              voter: vote[0] as `0x${string}`,
+              timestamp: vote[1] as bigint,
+            }
           }
-        }
-        return null
-      }).filter((vote): vote is Vote => vote !== null)
+          return null
+        })
+        .filter((vote): vote is Vote => vote !== null)
+        .sort((a, b) => {
+          // Sort by timestamp descending (newest first)
+          const timestampA = Number(a.timestamp)
+          const timestampB = Number(b.timestamp)
+          return timestampB - timestampA
+        })
     : undefined
 
   // Check if user has voted
