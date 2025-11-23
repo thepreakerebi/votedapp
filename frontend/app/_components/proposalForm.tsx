@@ -21,6 +21,7 @@ import {
 import { toast } from 'sonner'
 import { useState, useEffect, useRef, useCallback, startTransition } from 'react'
 import { ProposalConfirmationCard } from './proposalConfirmationCard'
+import { TransactionStatusModal } from './transactionStatusModal'
 
 const proposalSchema = z.object({
   title: z
@@ -44,6 +45,8 @@ export function ProposalForm() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showConfirmation, setShowConfirmation] = useState(false)
   const [formData, setFormData] = useState<ProposalFormValues | null>(null)
+  const [transactionStatus, setTransactionStatus] = useState<'pending' | 'confirming' | 'success' | 'error' | null>(null)
+  const [errorMessage, setErrorMessage] = useState<string | undefined>()
   const hasNavigated = useRef(false)
 
   const form = useForm<ProposalFormValues>({
@@ -70,7 +73,9 @@ export function ProposalForm() {
     if (!formData) return
     
     setIsSubmitting(true)
+    setTransactionStatus('pending')
     hasNavigated.current = false
+    
     writeContract(
       {
         address: contractConfig.address,
@@ -79,7 +84,13 @@ export function ProposalForm() {
         args: [formData.title, formData.description],
       },
       {
+        onSuccess: () => {
+          // Transaction submitted, now waiting for confirmation
+          setTransactionStatus('confirming')
+        },
         onError: (error: Error) => {
+          setTransactionStatus('error')
+          setErrorMessage(error.message || 'Failed to create proposal. Please try again.')
           toast.error(error.message || 'Failed to create proposal. Please try again.')
           setIsSubmitting(false)
         },
@@ -91,26 +102,54 @@ export function ProposalForm() {
   useEffect(() => {
     if (isSuccess && isSubmitting && !hasNavigated.current) {
       hasNavigated.current = true
-      toast.success('Proposal created successfully!')
       startTransition(() => {
-        setIsSubmitting(false)
-        router.push('/')
+        setTransactionStatus('success')
       })
+      toast.success('Proposal created successfully!')
+      
+      // Close modal and redirect after a brief delay
+      setTimeout(() => {
+        startTransition(() => {
+          setIsSubmitting(false)
+          setTransactionStatus(null)
+          router.push('/')
+        })
+      }, 1500)
     }
   }, [isSuccess, isSubmitting, router])
+
+  // Update status when transaction is pending confirmation
+  useEffect(() => {
+    if (isPending && transactionStatus === 'pending') {
+      startTransition(() => {
+        setTransactionStatus('confirming')
+      })
+    }
+  }, [isPending, transactionStatus])
 
   const isLoading = isPending || isConfirming || isSubmitting
 
   // Show confirmation card if user has submitted form
   if (showConfirmation && formData) {
     return (
-      <ProposalConfirmationCard
-        title={formData.title}
-        description={formData.description}
-        onBack={() => setShowConfirmation(false)}
-        onConfirm={handleConfirm}
-        isLoading={isLoading}
-      />
+      <>
+        <ProposalConfirmationCard
+          title={formData.title}
+          description={formData.description}
+          onBack={() => {
+            setShowConfirmation(false)
+            setTransactionStatus(null)
+            setErrorMessage(undefined)
+          }}
+          onConfirm={handleConfirm}
+          isLoading={isLoading}
+        />
+        <TransactionStatusModal
+          isOpen={transactionStatus !== null}
+          status={transactionStatus}
+          errorMessage={errorMessage}
+        />
+      </>
     )
   }
 

@@ -58,7 +58,7 @@ export function ProposalConfirmationCard({
           disabled={isLoading}
           className="flex-1 sm:flex-initial"
         >
-          {isLoading ? 'Creating Proposal...' : 'Confirm & Create Proposal'}
+          {isLoading ? 'Creating Proposal...' : 'Create Proposal'}
         </Button>
       </CardFooter>
     </Card>
