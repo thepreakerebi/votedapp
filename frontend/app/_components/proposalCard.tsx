@@ -10,6 +10,8 @@ import { useState, useEffect, useRef, startTransition } from 'react'
 import { VoteConfirmationModal } from './voteConfirmationModal'
 import { TransactionStatusModal } from './transactionStatusModal'
 import { useQueryClient } from '@tanstack/react-query'
+import Link from 'next/link'
+import { getProposalUniqueId } from '@/lib/proposalUtils'
 
 interface Proposal {
   id: bigint
@@ -172,27 +174,37 @@ export function ProposalCard({ proposal }: ProposalCardProps) {
     return `${addr.slice(0, 6)}...${addr.slice(-4)}`
   }
 
+  const proposalUniqueId = getProposalUniqueId(proposal)
+
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle>{proposal.title}</CardTitle>
-        <CardDescription>
-          Created by {formatAddress(proposal.creator)} • {formatDate(proposal.createdAt)}
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <p className="text-sm text-muted-foreground">{proposal.description}</p>
-      </CardContent>
+    <Card className="w-full group">
+      <Link href={`/proposals/${proposalUniqueId}`} className="block">
+        <CardHeader className="cursor-pointer hover:bg-accent/50 transition-colors">
+          <CardTitle className="group-hover:underline">{proposal.title}</CardTitle>
+          <CardDescription>
+            Created by {formatAddress(proposal.creator)} • {formatDate(proposal.createdAt)}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="cursor-pointer">
+          <p className="text-sm text-muted-foreground line-clamp-3">{proposal.description}</p>
+        </CardContent>
+      </Link>
       <CardFooter className="flex flex-row items-center justify-between">
-        <p className="text-sm text-muted-foreground">
-          <strong className="font-semibold">{proposal.voteCount.toString()}</strong> votes
-        </p>
+        <Link href={`/proposals/${proposalUniqueId}`} className="hover:opacity-80 transition-opacity">
+          <p className="text-sm text-muted-foreground cursor-pointer">
+            <strong className="font-semibold">{proposal.voteCount.toString()}</strong> votes
+          </p>
+        </Link>
         
         {!isConnected ? (
           <Button
             variant="outline"
             size="sm"
-            onClick={() => open()}
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              open()
+            }}
           >
             Connect wallet to vote
           </Button>
@@ -203,7 +215,11 @@ export function ProposalCard({ proposal }: ProposalCardProps) {
             <Button
               variant="default"
               size="sm"
-              onClick={handleVoteClick}
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                handleVoteClick()
+              }}
               disabled={isLoading}
             >
               {isLoading ? 'Processing...' : 'Vote'}
