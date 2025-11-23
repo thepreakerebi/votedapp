@@ -8,6 +8,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { toast } from 'sonner'
 import { useState, useEffect, useRef, startTransition } from 'react'
 import { VoteConfirmationModal } from './voteConfirmationModal'
+import { TransactionStatusModal } from './transactionStatusModal'
+import { useQueryClient } from '@tanstack/react-query'
 
 interface Proposal {
   id: bigint
@@ -31,9 +33,12 @@ export function ProposalCard({ proposal }: ProposalCardProps) {
   const isConnected = connections.length > 0
   const address = connections[0]?.accounts[0]
   const { open } = useAppKit()
+  const queryClient = useQueryClient()
 
   const [isVoting, setIsVoting] = useState(false)
   const [showVoteModal, setShowVoteModal] = useState(false)
+  const [transactionStatus, setTransactionStatus] = useState<'pending' | 'confirming' | 'success' | 'error' | null>(null)
+  const [errorMessage, setErrorMessage] = useState<string | undefined>()
   const hasShownSuccessToast = useRef(false)
   const hasShownErrorToast = useRef(false)
 
@@ -47,6 +52,7 @@ export function ProposalCard({ proposal }: ProposalCardProps) {
       enabled: isConnected && !!address,
     },
   })
+
 
   // Write function for voting
   const { writeContract, data: hash, isPending } = useWriteContract()
@@ -66,6 +72,7 @@ export function ProposalCard({ proposal }: ProposalCardProps) {
 
   const handleConfirmVote = () => {
     setIsVoting(true)
+    setTransactionStatus('pending')
     hasShownSuccessToast.current = false
     hasShownErrorToast.current = false
     setShowVoteModal(false)
@@ -77,7 +84,13 @@ export function ProposalCard({ proposal }: ProposalCardProps) {
         args: [proposal.id],
       },
       {
+        onSuccess: () => {
+          // Transaction submitted, now waiting for confirmation
+          setTransactionStatus('confirming')
+        },
         onError: (error: Error) => {
+          setTransactionStatus('error')
+          setErrorMessage(error.message || 'Transaction failed. Please try again.')
           toast.error(error.message || 'Transaction failed. Please try again.')
           setIsVoting(false)
         },
@@ -89,23 +102,58 @@ export function ProposalCard({ proposal }: ProposalCardProps) {
   useEffect(() => {
     if (isSuccess && isVoting && !hasShownSuccessToast.current) {
       hasShownSuccessToast.current = true
-      toast.success('Vote submitted successfully!')
       startTransition(() => {
-        setIsVoting(false)
+        setTransactionStatus('success')
       })
+      toast.success('Vote submitted successfully!')
+      
+      // Refetch proposal data and vote status to update UI
+      // Invalidate all queries for this contract address to ensure fresh data
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          const queryKey = query.queryKey
+          return (
+            Array.isArray(queryKey) &&
+            queryKey[0] === 'readContract' &&
+            typeof queryKey[1] === 'object' &&
+            queryKey[1] !== null &&
+            'address' in queryKey[1] &&
+            queryKey[1].address === contractConfig.address
+          )
+        },
+      })
+      
+      // Close modal after a brief delay
+      setTimeout(() => {
+        startTransition(() => {
+          setIsVoting(false)
+          setTransactionStatus(null)
+        })
+      }, 1500)
     }
-  }, [isSuccess, isVoting])
+  }, [isSuccess, isVoting, queryClient, proposal.id, address])
 
   // Handle transaction confirmation error
   useEffect(() => {
     if (isError && isVoting && !hasShownErrorToast.current) {
       hasShownErrorToast.current = true
-      toast.error('Transaction failed. Please try again.')
       startTransition(() => {
+        setTransactionStatus('error')
+        setErrorMessage('Transaction failed. Please try again.')
         setIsVoting(false)
       })
+      toast.error('Transaction failed. Please try again.')
     }
   }, [isError, isVoting])
+
+  // Update status when transaction is pending confirmation
+  useEffect(() => {
+    if (isPending && transactionStatus === 'pending') {
+      startTransition(() => {
+        setTransactionStatus('confirming')
+      })
+    }
+  }, [isPending, transactionStatus])
 
   const isLoading = isLoadingVoteStatus || isPending || isConfirming || isVoting
 
@@ -158,15 +206,24 @@ export function ProposalCard({ proposal }: ProposalCardProps) {
               onClick={handleVoteClick}
               disabled={isLoading}
             >
-              Vote
+              {isLoading ? 'Processing...' : 'Vote'}
             </Button>
             <VoteConfirmationModal
               isOpen={showVoteModal}
-              onClose={() => setShowVoteModal(false)}
+              onClose={() => {
+                setShowVoteModal(false)
+                setTransactionStatus(null)
+                setErrorMessage(undefined)
+              }}
               onConfirm={handleConfirmVote}
               proposalTitle={proposal.title}
               proposalDescription={proposal.description}
               isLoading={isLoading}
+            />
+            <TransactionStatusModal
+              isOpen={transactionStatus !== null}
+              status={transactionStatus}
+              errorMessage={errorMessage}
             />
           </>
         )}

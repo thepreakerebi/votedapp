@@ -7,7 +7,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Skeleton } from '@/components/ui/skeleton'
 import { Loader2 } from 'lucide-react'
 
 interface TransactionStatusModalProps {
@@ -42,7 +41,7 @@ export function TransactionStatusModal({
       case 'success':
         return {
           title: 'Transaction Confirmed',
-          description: 'Your proposal has been successfully created!',
+          description: 'Your transaction has been successfully confirmed!',
           showLoader: false,
         }
       case 'error':
