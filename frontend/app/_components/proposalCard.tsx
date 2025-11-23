@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from 'sonner'
 import { useState, useEffect, useRef, startTransition } from 'react'
+import { VoteConfirmationModal } from './voteConfirmationModal'
 
 interface Proposal {
   id: bigint
@@ -32,6 +33,7 @@ export function ProposalCard({ proposal }: ProposalCardProps) {
   const { open } = useAppKit()
 
   const [isVoting, setIsVoting] = useState(false)
+  const [showVoteModal, setShowVoteModal] = useState(false)
   const hasShownSuccessToast = useRef(false)
   const hasShownErrorToast = useRef(false)
 
@@ -54,15 +56,19 @@ export function ProposalCard({ proposal }: ProposalCardProps) {
     hash,
   })
 
-  const handleVote = () => {
+  const handleVoteClick = () => {
     if (!isConnected) {
       // This shouldn't happen as button should be disabled, but just in case
       return
     }
+    setShowVoteModal(true)
+  }
 
+  const handleConfirmVote = () => {
     setIsVoting(true)
     hasShownSuccessToast.current = false
     hasShownErrorToast.current = false
+    setShowVoteModal(false)
     writeContract(
       {
         address: contractConfig.address,
@@ -145,14 +151,24 @@ export function ProposalCard({ proposal }: ProposalCardProps) {
         ) : hasVoted ? (
           <p className="text-sm text-muted-foreground">You have voted</p>
         ) : (
-          <Button
-            variant="default"
-            size="sm"
-            onClick={handleVote}
-            disabled={isLoading}
-          >
-            {isLoading ? 'Processing...' : 'Vote'}
-          </Button>
+          <>
+            <Button
+              variant="default"
+              size="sm"
+              onClick={handleVoteClick}
+              disabled={isLoading}
+            >
+              Vote
+            </Button>
+            <VoteConfirmationModal
+              isOpen={showVoteModal}
+              onClose={() => setShowVoteModal(false)}
+              onConfirm={handleConfirmVote}
+              proposalTitle={proposal.title}
+              proposalDescription={proposal.description}
+              isLoading={isLoading}
+            />
+          </>
         )}
       </CardFooter>
     </Card>
