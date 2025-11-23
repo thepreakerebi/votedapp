@@ -119,4 +119,21 @@
   body {
     @apply bg-background text-foreground;
   }
+  
+  /* Style AppKit button text to white for better contrast */
+  appkit-button::part(button),
+  appkit-button button,
+  appkit-button w3m-button,
+  appkit-button w3m-button::part(button),
+  appkit-button * {
+    color: white !important;
+  }
+  
+  /* Target text content specifically */
+  appkit-button button span,
+  appkit-button w3m-button span,
+  appkit-button button::before,
+  appkit-button w3m-button::before {
+    color: white !important;
+  }
 }
