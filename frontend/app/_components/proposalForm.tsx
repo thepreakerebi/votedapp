@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/form'
 import { toast } from 'sonner'
 import { useState, useEffect, useRef, useCallback, startTransition } from 'react'
+import { ProposalConfirmationCard } from './proposalConfirmationCard'
 
 const proposalSchema = z.object({
   title: z
@@ -41,6 +42,8 @@ type ProposalFormValues = z.infer<typeof proposalSchema>
 export function ProposalForm() {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showConfirmation, setShowConfirmation] = useState(false)
+  const [formData, setFormData] = useState<ProposalFormValues | null>(null)
   const hasNavigated = useRef(false)
 
   const form = useForm<ProposalFormValues>({
@@ -58,6 +61,14 @@ export function ProposalForm() {
   })
 
   const onSubmit = useCallback((values: ProposalFormValues) => {
+    // Show confirmation card instead of submitting directly
+    setFormData(values)
+    setShowConfirmation(true)
+  }, [])
+
+  const handleConfirm = useCallback(() => {
+    if (!formData) return
+    
     setIsSubmitting(true)
     hasNavigated.current = false
     writeContract(
@@ -65,7 +76,7 @@ export function ProposalForm() {
         address: contractConfig.address,
         abi: contractConfig.abi,
         functionName: CONTRACT_FUNCTIONS.createProposal,
-        args: [values.title, values.description],
+        args: [formData.title, formData.description],
       },
       {
         onError: (error: Error) => {
@@ -74,7 +85,7 @@ export function ProposalForm() {
         },
       }
     )
-  }, [writeContract])
+  }, [formData, writeContract])
 
   // Handle successful transaction
   useEffect(() => {
@@ -89,6 +100,19 @@ export function ProposalForm() {
   }, [isSuccess, isSubmitting, router])
 
   const isLoading = isPending || isConfirming || isSubmitting
+
+  // Show confirmation card if user has submitted form
+  if (showConfirmation && formData) {
+    return (
+      <ProposalConfirmationCard
+        title={formData.title}
+        description={formData.description}
+        onBack={() => setShowConfirmation(false)}
+        onConfirm={handleConfirm}
+        isLoading={isLoading}
+      />
+    )
+  }
 
   return (
     <Form {...form}>
@@ -148,7 +172,7 @@ export function ProposalForm() {
             disabled={isLoading}
             className="flex-1 sm:flex-initial"
           >
-            {isLoading ? 'Creating Proposal...' : 'Create Proposal'}
+            Review Proposal
           </Button>
           <Button
             type="button"
